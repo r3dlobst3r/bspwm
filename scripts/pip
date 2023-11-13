@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Define the monitor name for xrandr
+MONITOR_NAME="DisplayPort-0" # Adjust if needed
+
+# Define the PbP and default resolutions
+PBP_RESOLUTION="1720x1440"
+DEFAULT_RESOLUTION="3440x1440"
+
+# Paths to the layout scripts
+PBP_LAYOUT="$HOME/.screenlayout/pip_on.sh"
+DEFAULT_LAYOUT="$HOME/.screenlayout/pip_off.sh"
+
+# VCP code for PbP feature and the values for enabling/disabling
+VCP_CODE_PBP="E9"
+VCP_VALUE_ENABLE_PBP="36"  # Value to enable PbP
+VCP_VALUE_DISABLE_PBP="00"  # Value to disable PbP
+VCP_CODE_INPUT="60"
+VCP_VALUE_DP="15"
+VCP_VALUE_HDMI="17"
+# Get the current resolution of the monitor
+CURRENT_RESOLUTION=$(xrandr | grep "$MONITOR_NAME connected" | grep -o -E "[0-9]+x[0-9]+\+[0-9]+\+[0-9]+" | cut -d '+' -f1)
+
+echo "Current Resolution: $CURRENT_RESOLUTION"
+
+# Check if the current resolution matches the PbP resolution
+if [ "$CURRENT_RESOLUTION" = "$PBP_RESOLUTION" ]; then
+    echo "Disabling PbP mode..."
+    ddcutil -d 1 setvcp $VCP_CODE_INPUT $VCP_VALUE_DP
+    sleep 3
+    ddcutil -d 1 setvcp $VCP_CODE_PBP $VCP_VALUE_DISABLE_PBP
+    sleep 2
+    sh $DEFAULT_LAYOUT
+    sleep 1
+    sh ~/.config/bspwm/themes/default/apply.sh
+    sleep 1
+    pkill barrier
+    echo "Switched to default layout."
+else
+    echo "Enabling PbP mode..."
+    ddcutil -d 1 setvcp $VCP_CODE_INPUT $VCP_VALUE_HDMI
+    sleep 3
+    ddcutil -d 1 setvcp $VCP_CODE_PBP $VCP_VALUE_ENABLE_PBP
+    sleep 2
+    sh $PBP_LAYOUT
+    sleep 1
+    sh ~/.config/bspwm/themes/default/apply.sh
+    sleep 1
+    barrier
+    echo "Switched to PbP layout."
+fi
+
